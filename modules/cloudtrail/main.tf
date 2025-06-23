@@ -37,10 +37,6 @@ resource "aws_cloudwatch_log_group" "ct_logs" {
   retention_in_days = var.log_retention_days
 }
 
-locals {
-  cloudwatch_log_group_arn = aws_cloudwatch_log_group.ct_logs.arn
-}
-
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
@@ -133,7 +129,7 @@ resource "aws_cloudtrail" "this" {
   is_multi_region_trail         = true
   enable_log_file_validation    = true
 
-  cloud_watch_logs_group_arn = local.cloudwatch_log_group_arn
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.ct_logs.arn}:*"
   cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail.arn
 
   event_selector {
