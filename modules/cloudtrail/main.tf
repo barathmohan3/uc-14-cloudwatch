@@ -1,3 +1,4 @@
+
 data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
@@ -10,16 +11,20 @@ resource "aws_s3_bucket" "trail_bucket" {
   bucket = "${var.name_prefix}-cloudtrail-${random_id.bucket_suffix.hex}"
   acl    = "private"
 
-  versioning {
-    enabled = true
-  }
-
   lifecycle_rule {
     enabled = true
 
     expiration {
       days = 365
     }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "trail_bucket_versioning" {
+  bucket = aws_s3_bucket.trail_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
@@ -64,8 +69,8 @@ data "aws_iam_policy_document" "cloudtrail" {
       "logs:CreateLogGroup"
     ]
     resources = [
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}",
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}:*"
+      "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}",
+      "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}:*"
     ]
   }
 }
@@ -87,7 +92,7 @@ resource "aws_cloudtrail" "this" {
   is_multi_region_trail         = true
   enable_log_file_validation    = true
 
-  cloud_watch_logs_group_arn = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}"
+  cloud_watch_logs_group_arn = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}"
   cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail.arn
 
   event_selector {
