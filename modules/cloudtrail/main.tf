@@ -62,15 +62,15 @@ resource "aws_cloudtrail" "this" {
   include_global_service_events = true
   is_multi_region_trail         = true
   enable_log_file_validation    = true
-  cloud_watch_logs_group_arn    = arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}
+  cloud_watch_logs_group_arn    = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}"
   cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail.arn
 
   event_selector {
     read_write_type           = "All"
     include_management_events = true
   }
- depends_on = [aws_cloudwatch_log_group.ct_logs]
 
+  depends_on = [aws_cloudwatch_log_group.ct_logs]
 }
 
 
