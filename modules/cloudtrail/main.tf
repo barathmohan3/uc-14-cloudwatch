@@ -3,7 +3,10 @@ resource "aws_s3_bucket" "trail_bucket" {
   bucket = var.s3_bucket_name
   acl    = "private"
   versioning { enabled = true }
-  lifecycle_rule { enabled = true; expiration { days = 365 } }
+  lifecycle_rule { 
+     enabled = true
+     expiration { days = 365 } 
+       }
 }
 
 resource "aws_iam_role" "cloudtrail" {
@@ -13,7 +16,10 @@ resource "aws_iam_role" "cloudtrail" {
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
-    principals { type = "Service"; identifiers = ["cloudtrail.amazonaws.com"] }
+    principals { 
+        type = "Service"
+        identifiers = ["cloudtrail.amazonaws.com"] 
+              }
     actions = ["sts:AssumeRole"]
   }
 }
