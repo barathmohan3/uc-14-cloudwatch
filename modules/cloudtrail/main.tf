@@ -28,11 +28,6 @@ resource "aws_cloudwatch_log_group" "ct_logs" {
   retention_in_days = var.log_retention_days
 }
 
-resource "aws_iam_role" "cloudtrail" {
-  name               = "${var.name_prefix}-cloudtrail-role"
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
-}
-
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
@@ -44,9 +39,9 @@ data "aws_iam_policy_document" "assume_role" {
   }
 }
 
-resource "aws_iam_role_policy" "cloudtrail" {
-  role   = aws_iam_role.cloudtrail.id
-  policy = data.aws_iam_policy_document.cloudtrail.json
+resource "aws_iam_role" "cloudtrail" {
+  name               = "${var.name_prefix}-cloudtrail-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 
 data "aws_iam_policy_document" "cloudtrail" {
@@ -75,10 +70,14 @@ data "aws_iam_policy_document" "cloudtrail" {
   }
 }
 
-# Sleep to ensure IAM policy is fully propagated before CloudTrail tries to validate log group
+resource "aws_iam_role_policy" "cloudtrail" {
+  role   = aws_iam_role.cloudtrail.id
+  policy = data.aws_iam_policy_document.cloudtrail.json
+}
+
 resource "time_sleep" "wait_for_iam" {
   depends_on      = [aws_iam_role_policy.cloudtrail]
-  create_duration = "15s"
+  create_duration = "60s" # Increased wait time
 }
 
 resource "aws_cloudtrail" "this" {
@@ -87,8 +86,9 @@ resource "aws_cloudtrail" "this" {
   include_global_service_events = true
   is_multi_region_trail         = true
   enable_log_file_validation    = true
-  cloud_watch_logs_group_arn    = aws_cloudwatch_log_group.ct_logs.arn
-  cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail.arn
+
+  cloud_watch_logs_group_arn = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}"
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail.arn
 
   event_selector {
     read_write_type           = "All"
@@ -97,6 +97,7 @@ resource "aws_cloudtrail" "this" {
 
   depends_on = [
     aws_cloudwatch_log_group.ct_logs,
+    aws_iam_role_policy.cloudtrail,
     time_sleep.wait_for_iam
   ]
 }
