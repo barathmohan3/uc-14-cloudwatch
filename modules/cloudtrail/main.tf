@@ -1,5 +1,3 @@
-# modules/cloudtrail/main.tf
-
 data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
@@ -11,35 +9,53 @@ resource "random_id" "bucket_suffix" {
 resource "aws_s3_bucket" "trail_bucket" {
   bucket = "${var.name_prefix}-cloudtrail-${random_id.bucket_suffix.hex}"
   acl    = "private"
-  versioning { enabled = true }
-  lifecycle_rule { 
-     enabled = true
-     expiration { days = 365 } 
-       }
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    enabled = true
+
+    expiration {
+      days = 365
+    }
+  }
+}
+
+resource "aws_cloudwatch_log_group" "ct_logs" {
+  name              = "/aws/cloudtrail/${var.name_prefix}"
+  retention_in_days = var.log_retention_days
 }
 
 resource "aws_iam_role" "cloudtrail" {
-  name = "${var.name_prefix}-cloudtrail-role"
+  name               = "${var.name_prefix}-cloudtrail-role"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
+
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
-    principals { 
-        type = "Service"
-        identifiers = ["cloudtrail.amazonaws.com"] 
-              }
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
     actions = ["sts:AssumeRole"]
   }
 }
+
 resource "aws_iam_role_policy" "cloudtrail" {
-  role = aws_iam_role.cloudtrail.id
+  role   = aws_iam_role.cloudtrail.id
   policy = data.aws_iam_policy_document.cloudtrail.json
 }
 
 data "aws_iam_policy_document" "cloudtrail" {
   statement {
-    actions = ["s3:PutObject", "s3:GetBucketAcl", "s3:PutObjectAcl"]
+    actions = [
+      "s3:PutObject",
+      "s3:GetBucketAcl",
+      "s3:PutObjectAcl"
+    ]
     resources = [
       "${aws_s3_bucket.trail_bucket.arn}/*",
       aws_s3_bucket.trail_bucket.arn
@@ -47,19 +63,23 @@ data "aws_iam_policy_document" "cloudtrail" {
   }
 
   statement {
-  actions = [
-    "logs:CreateLogStream",
-    "logs:PutLogEvents",
-    "logs:CreateLogGroup"
-  ]
-  resources = [
-    "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}",
-    "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}:*"
-  ]
-}
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:CreateLogGroup"
+    ]
+    resources = [
+      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}",
+      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}:*"
+    ]
+  }
 }
 
-
+# Sleep to ensure IAM policy is fully propagated before CloudTrail tries to validate log group
+resource "time_sleep" "wait_for_iam" {
+  depends_on      = [aws_iam_role_policy.cloudtrail]
+  create_duration = "15s"
+}
 
 resource "aws_cloudtrail" "this" {
   name                          = "${var.name_prefix}-trail"
@@ -67,7 +87,7 @@ resource "aws_cloudtrail" "this" {
   include_global_service_events = true
   is_multi_region_trail         = true
   enable_log_file_validation    = true
-  cloud_watch_logs_group_arn    = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}"
+  cloud_watch_logs_group_arn    = aws_cloudwatch_log_group.ct_logs.arn
   cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail.arn
 
   event_selector {
@@ -75,11 +95,8 @@ resource "aws_cloudtrail" "this" {
     include_management_events = true
   }
 
-  depends_on = [aws_cloudwatch_log_group.ct_logs]
-}
-
-
-resource "aws_cloudwatch_log_group" "ct_logs" {
-  name              = "/aws/cloudtrail/${var.name_prefix}"
-  retention_in_days = var.log_retention_days
+  depends_on = [
+    aws_cloudwatch_log_group.ct_logs,
+    time_sleep.wait_for_iam
+  ]
 }
