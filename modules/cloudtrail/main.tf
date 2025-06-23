@@ -38,14 +38,23 @@ resource "aws_iam_role_policy" "cloudtrail" {
 }
 data "aws_iam_policy_document" "cloudtrail" {
   statement {
-    actions = ["s3:PutObject","s3:GetBucketAcl","s3:PutObjectAcl"]
-    resources = ["${aws_s3_bucket.trail_bucket.arn}/*", aws_s3_bucket.trail_bucket.arn]
+    actions = ["s3:PutObject", "s3:GetBucketAcl", "s3:PutObjectAcl"]
+    resources = [
+      "${aws_s3_bucket.trail_bucket.arn}/*",
+      aws_s3_bucket.trail_bucket.arn
+    ]
   }
+
   statement {
-    actions = ["logs:CreateLogStream","logs:PutLogEvents","logs:CreateLogGroup"]
-    resources = ["*"]
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:CreateLogGroup"
+    ]
+    resources = ["arn:aws:logs:*:*:*"]
   }
 }
+
 
 resource "aws_cloudtrail" "this" {
   name                          = "${var.name_prefix}-trail"
