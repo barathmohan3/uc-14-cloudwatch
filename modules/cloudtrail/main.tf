@@ -96,7 +96,7 @@ resource "aws_cloudtrail" "this" {
   is_multi_region_trail         = true
   enable_log_file_validation    = true
 
-  cloud_watch_logs_group_arn = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}"
+  cloud_watch_logs_group_arn = "arn:aws:logs:us-east-2:650251701672:log-group:/aws/cloudtrail/sec:*"
   cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail.arn
 
   event_selector {
