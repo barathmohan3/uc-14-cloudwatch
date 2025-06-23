@@ -73,8 +73,9 @@ data "aws_iam_policy_document" "cloudtrail" {
       "logs:CreateLogGroup"
     ]
     resources = [
-      "${local.cloudwatch_log_group_arn}",
-      "${local.cloudwatch_log_group_arn}:*"
+
+       "${aws_cloudwatch_log_group.ct_logs.arn}:*",
+       "${.cloudwatch_log_group_arn}"
     ]
   }
 }
