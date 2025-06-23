@@ -36,6 +36,7 @@ resource "aws_iam_role_policy" "cloudtrail" {
   role = aws_iam_role.cloudtrail.id
   policy = data.aws_iam_policy_document.cloudtrail.json
 }
+
 data "aws_iam_policy_document" "cloudtrail" {
   statement {
     actions = ["s3:PutObject", "s3:GetBucketAcl", "s3:PutObjectAcl"]
@@ -51,9 +52,12 @@ data "aws_iam_policy_document" "cloudtrail" {
       "logs:PutLogEvents",
       "logs:CreateLogGroup"
     ]
-    resources = ["arn:aws:logs:*:*:*"]
+    resources = [
+      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}:*"
+    ]
   }
 }
+
 
 
 resource "aws_cloudtrail" "this" {
