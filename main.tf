@@ -10,5 +10,5 @@ module "console_login_alert" {
   source         = "./modules/console_login_alert"
   prefix         = "sec"
   log_group_name = module.cloudtrail.cloud_watch_log_group_name
-  email_address  = "security@example.com"
+  email_address  = "barathmohan.sivas@hcltech.com"
 }
