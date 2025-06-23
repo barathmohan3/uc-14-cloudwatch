@@ -60,6 +60,8 @@ resource "aws_cloudtrail" "this" {
     read_write_type           = "All"
     include_management_events = true
   }
+ depends_on = [aws_cloudwatch_log_group.ct_logs]
+
 }
 
 
