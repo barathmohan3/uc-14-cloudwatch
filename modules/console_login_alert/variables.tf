@@ -5,8 +5,7 @@ variable "metric_namespace" {
       type = string
       default = "Security/CloudTrail" 
 }
-variable "alarm_period_sec" 
-{ 
+variable "alarm_period_sec" { 
   type = number
   default = 300 
 }
