@@ -1,6 +1,10 @@
 # modules/cloudtrail/main.tf
+resource "random_id" "bucket_suffix" {
+  byte_length = 4
+}
+
 resource "aws_s3_bucket" "trail_bucket" {
-  bucket = var.s3_bucket_name
+  bucket = "${var.name_prefix}-cloudtrail-${random_id.bucket_suffix.hex}"
   acl    = "private"
   versioning { enabled = true }
   lifecycle_rule { 
