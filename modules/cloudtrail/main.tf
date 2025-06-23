@@ -1,4 +1,3 @@
-
 data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
@@ -10,14 +9,6 @@ resource "random_id" "bucket_suffix" {
 resource "aws_s3_bucket" "trail_bucket" {
   bucket = "${var.name_prefix}-cloudtrail-${random_id.bucket_suffix.hex}"
   acl    = "private"
-
-  lifecycle_rule {
-    enabled = true
-
-    expiration {
-      days = 365
-    }
-  }
 }
 
 resource "aws_s3_bucket_versioning" "trail_bucket_versioning" {
@@ -25,6 +16,19 @@ resource "aws_s3_bucket_versioning" "trail_bucket_versioning" {
 
   versioning_configuration {
     status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "trail_bucket_lifecycle" {
+  bucket = aws_s3_bucket.trail_bucket.id
+
+  rule {
+    id     = "expire-objects"
+    status = "Enabled"
+
+    expiration {
+      days = 365
+    }
   }
 }
 
@@ -82,7 +86,7 @@ resource "aws_iam_role_policy" "cloudtrail" {
 
 resource "time_sleep" "wait_for_iam" {
   depends_on      = [aws_iam_role_policy.cloudtrail]
-  create_duration = "60s" # Increased wait time
+  create_duration = "60s"
 }
 
 resource "aws_cloudtrail" "this" {
