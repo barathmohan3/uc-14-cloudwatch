@@ -89,6 +89,39 @@ resource "time_sleep" "wait_for_iam" {
   create_duration = "60s"
 }
 
+resource "aws_s3_bucket_policy" "trail_bucket_policy" {
+  bucket = aws_s3_bucket.trail_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid       = "AWSCloudTrailAclCheck",
+        Effect    = "Allow",
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        },
+        Action    = "s3:GetBucketAcl",
+        Resource  = aws_s3_bucket.trail_bucket.arn
+      },
+      {
+        Sid       = "AWSCloudTrailWrite",
+        Effect    = "Allow",
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        },
+        Action    = "s3:PutObject",
+        Resource  = "${aws_s3_bucket.trail_bucket.arn}/AWSLogs/${data.aws_caller_identity.current.account_id}/*",
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_cloudtrail" "this" {
   name                          = "${var.name_prefix}-trail"
   s3_bucket_name                = aws_s3_bucket.trail_bucket.id
@@ -96,7 +129,7 @@ resource "aws_cloudtrail" "this" {
   is_multi_region_trail         = true
   enable_log_file_validation    = true
 
-  cloud_watch_logs_group_arn = "arn:aws:logs:us-east-2:650251701672:log-group:/aws/cloudtrail/sec:*"
+  cloud_watch_logs_group_arn = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${var.name_prefix}"
   cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail.arn
 
   event_selector {
@@ -107,6 +140,7 @@ resource "aws_cloudtrail" "this" {
   depends_on = [
     aws_cloudwatch_log_group.ct_logs,
     aws_iam_role_policy.cloudtrail,
-    time_sleep.wait_for_iam
+    time_sleep.wait_for_iam,
+    aws_s3_bucket_policy.trail_bucket_policy
   ]
 }
